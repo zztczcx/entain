@@ -29,27 +29,37 @@ func Test_applyFilter_QueryOnly(t *testing.T) {
 		{
 			name:      "meeting_ids single",
 			filter:    &racing.ListRacesRequestFilter{MeetingIds: []int64{1}},
-			expectSQL: base + " WHERE meeting_id IN (?)",
+			expectSQL: base + " WHERE meeting_id IN (?) ORDER BY advertised_start_time ASC",
 		},
 		{
 			name:      "meeting_ids multiple",
 			filter:    &racing.ListRacesRequestFilter{MeetingIds: []int64{1, 2, 3}},
-			expectSQL: base + " WHERE meeting_id IN (?,?,?)",
+			expectSQL: base + " WHERE meeting_id IN (?,?,?) ORDER BY advertised_start_time ASC",
 		},
 		{
 			name:      "show_hidden unset includes hidden (no visible filter)",
 			filter:    &racing.ListRacesRequestFilter{},
-			expectSQL: base,
+			expectSQL: base + " ORDER BY advertised_start_time ASC",
 		},
 		{
 			name:      "show_hidden false adds visible=1",
 			filter:    &racing.ListRacesRequestFilter{ShowHidden: boolPtr(false)},
-			expectSQL: base + " WHERE visible = 1",
+			expectSQL: base + " WHERE visible = 1 ORDER BY advertised_start_time ASC",
 		},
 		{
 			name:      "meeting_ids + show_hidden false",
 			filter:    &racing.ListRacesRequestFilter{MeetingIds: []int64{1, 2}, ShowHidden: boolPtr(false)},
-			expectSQL: base + " WHERE meeting_id IN (?,?) AND visible = 1",
+			expectSQL: base + " WHERE meeting_id IN (?,?) AND visible = 1 ORDER BY advertised_start_time ASC",
+		},
+		{
+			name:      "order by name",
+			filter:    &racing.ListRacesRequestFilter{OrderBy: "name"},
+			expectSQL: base + " ORDER BY name ASC",
+		},
+		{
+			name:      "order by default",
+			filter:    &racing.ListRacesRequestFilter{},
+			expectSQL: base + " ORDER BY advertised_start_time ASC",
 		},
 	}
 
@@ -88,12 +98,36 @@ func TestRacesRepo_List_WithSQLMock(t *testing.T) {
 		{
 			name:      "show_hidden unset includes hidden",
 			filter:    &racing.ListRacesRequestFilter{},
-			expectSQL: base,
+			expectSQL: base + " ORDER BY advertised_start_time ASC",
 			args:      nil,
 			rows: [][]any{
 				{int64(20), int64(5), "Race C", int64(1), false, time.Now()},
 			},
 			wantCount: 1,
+		},
+		{
+			name:      "explicit desc",
+			filter:    &racing.ListRacesRequestFilter{OrderBy: "advertised_start_time desc"},
+			expectSQL: base + " ORDER BY advertised_start_time DESC",
+			args:      nil,
+			rows:      [][]any{},
+			wantCount: 0,
+		},
+		{
+			name:      "order by name asc",
+			filter:    &racing.ListRacesRequestFilter{OrderBy: "name"},
+			expectSQL: base + " ORDER BY name ASC",
+			args:      nil,
+			rows:      [][]any{},
+			wantCount: 0,
+		},
+		{
+			name:      "order by number desc",
+			filter:    &racing.ListRacesRequestFilter{OrderBy: "number desc"},
+			expectSQL: base + " ORDER BY number DESC",
+			args:      nil,
+			rows:      [][]any{},
+			wantCount: 0,
 		},
 	}
 

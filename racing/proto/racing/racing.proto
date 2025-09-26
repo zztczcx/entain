@@ -26,6 +26,8 @@ message ListRacesRequestFilter {
   repeated int64 meeting_ids = 1;
   // When unset, include hidden (default). Set false to only visible; true to include hidden.
   optional bool show_hidden = 2;
+  // Order by, e.g. "advertised_start_time" or "advertised_start_time desc" (default asc)
+  string order_by = 3;
 }
 
 /* Resources */

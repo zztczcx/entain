@@ -118,7 +118,9 @@ type ListRacesRequestFilter struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	MeetingIds []int64                `protobuf:"varint,1,rep,packed,name=meeting_ids,json=meetingIds,proto3" json:"meeting_ids,omitempty"`
 	// When unset, include hidden (default). Set false to only visible; true to include hidden.
-	ShowHidden    *bool `protobuf:"varint,2,opt,name=show_hidden,json=showHidden,proto3,oneof" json:"show_hidden,omitempty"`
+	ShowHidden *bool `protobuf:"varint,2,opt,name=show_hidden,json=showHidden,proto3,oneof" json:"show_hidden,omitempty"`
+	// Order by, e.g. "advertised_start_time" or "advertised_start_time desc" (default asc)
+	OrderBy       string `protobuf:"bytes,3,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -165,6 +167,13 @@ func (x *ListRacesRequestFilter) GetShowHidden() bool {
 		return *x.ShowHidden
 	}
 	return false
+}
+
+func (x *ListRacesRequestFilter) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
 }
 
 // A race resource.
@@ -266,12 +275,13 @@ const file_racing_racing_proto_rawDesc = "" +
 	"\x10ListRacesRequest\x126\n" +
 	"\x06filter\x18\x01 \x01(\v2\x1e.racing.ListRacesRequestFilterR\x06filter\"7\n" +
 	"\x11ListRacesResponse\x12\"\n" +
-	"\x05races\x18\x01 \x03(\v2\f.racing.RaceR\x05races\"o\n" +
+	"\x05races\x18\x01 \x03(\v2\f.racing.RaceR\x05races\"\x8a\x01\n" +
 	"\x16ListRacesRequestFilter\x12\x1f\n" +
 	"\vmeeting_ids\x18\x01 \x03(\x03R\n" +
 	"meetingIds\x12$\n" +
 	"\vshow_hidden\x18\x02 \x01(\bH\x00R\n" +
-	"showHidden\x88\x01\x01B\x0e\n" +
+	"showHidden\x88\x01\x01\x12\x19\n" +
+	"\border_by\x18\x03 \x01(\tR\aorderByB\x0e\n" +
 	"\f_show_hidden\"\xcb\x01\n" +
 	"\x04Race\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1d\n" +

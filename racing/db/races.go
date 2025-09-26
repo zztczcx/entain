@@ -89,6 +89,31 @@ func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFil
 		query += " WHERE " + strings.Join(clauses, " AND ")
 	}
 
+	if filter.OrderBy != "" {
+		ob := strings.ToLower(strings.TrimSpace(filter.OrderBy))
+		tokens := strings.Fields(ob)
+		if len(tokens) >= 1 {
+			switch tokens[0] {
+			case "id", "meeting_id", "name", "number", "visible", "advertised_start_time":
+				orderField := tokens[0]
+				orderDir := "ASC"
+				if len(tokens) >= 2 {
+					switch tokens[1] {
+					case "desc":
+						orderDir = "DESC"
+					case "asc":
+						orderDir = "ASC"
+					}
+				}
+				query += " ORDER BY " + orderField + " " + orderDir
+			default:
+				// unknown column ignored to avoid injection; keep defaults
+			}
+		}
+	} else {
+		query += " ORDER BY advertised_start_time ASC"
+	}
+
 	return query, args
 }
 

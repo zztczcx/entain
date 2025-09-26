@@ -164,6 +164,4 @@ func TestRacesRepo_List_WithSQLMock(t *testing.T) {
 			require.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
-
-	// status derivation now happens in service layer; DB test not asserting status
 }

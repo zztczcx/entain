@@ -24,6 +24,8 @@ message ListRacesResponse {
 // Filter for listing races.
 message ListRacesRequestFilter {
   repeated int64 meeting_ids = 1;
+  // When unset, include hidden (default). Set false to only visible; true to include hidden.
+  optional bool show_hidden = 2;
 }
 
 /* Resources */

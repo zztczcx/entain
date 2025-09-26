@@ -2,7 +2,6 @@ name: CI
 
 on:
   push:
-  pull_request:
 
 jobs:
   build:
@@ -65,6 +64,10 @@ jobs:
         with:
           name: dist
           path: dist
+
+      - name: Make binaries executable
+        run: |
+          chmod +x dist/racing dist/api
 
       - name: Start gRPC server
         working-directory: racing

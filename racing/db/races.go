@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	_ "github.com/mattn/go-sqlite3"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 
 	"git.neds.sh/matty/entain/racing/proto/racing"
 )
@@ -47,7 +47,7 @@ func (r *racesRepo) List(filter *racing.ListRacesRequestFilter) ([]*racing.Race,
 	var (
 		err   error
 		query string
-		args  []interface{}
+		args  []any
 	)
 
 	query = getRaceQueries()[racesList]
@@ -62,10 +62,10 @@ func (r *racesRepo) List(filter *racing.ListRacesRequestFilter) ([]*racing.Race,
 	return r.scanRaces(rows)
 }
 
-func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFilter) (string, []interface{}) {
+func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFilter) (string, []any) {
 	var (
 		clauses []string
-		args    []interface{}
+		args    []any
 	)
 
 	if filter == nil {
@@ -78,6 +78,11 @@ func (r *racesRepo) applyFilter(query string, filter *racing.ListRacesRequestFil
 		for _, meetingID := range filter.MeetingIds {
 			args = append(args, meetingID)
 		}
+	}
+
+	// show_hidden semantics: unset or true => include hidden; false => only visible
+	if filter.ShowHidden != nil && !*filter.ShowHidden {
+		clauses = append(clauses, "visible = 1")
 	}
 
 	if len(clauses) != 0 {
@@ -104,12 +109,7 @@ func (m *racesRepo) scanRaces(
 			return nil, err
 		}
 
-		ts, err := ptypes.TimestampProto(advertisedStart)
-		if err != nil {
-			return nil, err
-		}
-
-		race.AdvertisedStartTime = ts
+		race.AdvertisedStartTime = timestamppb.New(advertisedStart)
 
 		races = append(races, &race)
 	}

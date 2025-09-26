@@ -13,6 +13,8 @@ import (
 )
 
 // RacesRepo provides repository access to races.
+//
+//go:generate mockery --name RacesRepo --structname RacesRepoMock --dir . --output . --outpkg db --filename races_repo_mock.go
 type RacesRepo interface {
 	// Init will initialise our races repository.
 	Init() error

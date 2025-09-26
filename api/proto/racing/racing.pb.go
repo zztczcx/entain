@@ -23,6 +23,53 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Status is derived from advertised_start_time: OPEN (future) or CLOSED (past)
+type Race_Status int32
+
+const (
+	Race_STATUS_OPEN   Race_Status = 0
+	Race_STATUS_CLOSED Race_Status = 1
+)
+
+// Enum value maps for Race_Status.
+var (
+	Race_Status_name = map[int32]string{
+		0: "STATUS_OPEN",
+		1: "STATUS_CLOSED",
+	}
+	Race_Status_value = map[string]int32{
+		"STATUS_OPEN":   0,
+		"STATUS_CLOSED": 1,
+	}
+)
+
+func (x Race_Status) Enum() *Race_Status {
+	p := new(Race_Status)
+	*p = x
+	return p
+}
+
+func (x Race_Status) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Race_Status) Descriptor() protoreflect.EnumDescriptor {
+	return file_racing_racing_proto_enumTypes[0].Descriptor()
+}
+
+func (Race_Status) Type() protoreflect.EnumType {
+	return &file_racing_racing_proto_enumTypes[0]
+}
+
+func (x Race_Status) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Race_Status.Descriptor instead.
+func (Race_Status) EnumDescriptor() ([]byte, []int) {
+	return file_racing_racing_proto_rawDescGZIP(), []int{3, 0}
+}
+
 // Request for ListRaces call.
 type ListRacesRequest struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
@@ -191,6 +238,7 @@ type Race struct {
 	Visible bool `protobuf:"varint,5,opt,name=visible,proto3" json:"visible,omitempty"`
 	// AdvertisedStartTime is the time the race is advertised to run.
 	AdvertisedStartTime *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=advertised_start_time,json=advertisedStartTime,proto3" json:"advertised_start_time,omitempty"`
+	Status              Race_Status            `protobuf:"varint,7,opt,name=status,proto3,enum=racing.Race_Status" json:"status,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -267,6 +315,13 @@ func (x *Race) GetAdvertisedStartTime() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Race) GetStatus() Race_Status {
+	if x != nil {
+		return x.Status
+	}
+	return Race_STATUS_OPEN
+}
+
 var File_racing_racing_proto protoreflect.FileDescriptor
 
 const file_racing_racing_proto_rawDesc = "" +
@@ -282,7 +337,7 @@ const file_racing_racing_proto_rawDesc = "" +
 	"\vshow_hidden\x18\x02 \x01(\bH\x00R\n" +
 	"showHidden\x88\x01\x01\x12\x19\n" +
 	"\border_by\x18\x03 \x01(\tR\aorderByB\x0e\n" +
-	"\f_show_hidden\"\xcb\x01\n" +
+	"\f_show_hidden\"\xa6\x02\n" +
 	"\x04Race\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1d\n" +
 	"\n" +
@@ -290,7 +345,11 @@ const file_racing_racing_proto_rawDesc = "" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x16\n" +
 	"\x06number\x18\x04 \x01(\x03R\x06number\x12\x18\n" +
 	"\avisible\x18\x05 \x01(\bR\avisible\x12N\n" +
-	"\x15advertised_start_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x13advertisedStartTime2e\n" +
+	"\x15advertised_start_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x13advertisedStartTime\x12+\n" +
+	"\x06status\x18\a \x01(\x0e2\x13.racing.Race.StatusR\x06status\",\n" +
+	"\x06Status\x12\x0f\n" +
+	"\vSTATUS_OPEN\x10\x00\x12\x11\n" +
+	"\rSTATUS_CLOSED\x10\x012e\n" +
 	"\x06Racing\x12[\n" +
 	"\tListRaces\x12\x18.racing.ListRacesRequest\x1a\x19.racing.ListRacesResponse\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/v1/list-racesB\tZ\a/racingb\x06proto3"
 
@@ -306,25 +365,28 @@ func file_racing_racing_proto_rawDescGZIP() []byte {
 	return file_racing_racing_proto_rawDescData
 }
 
+var file_racing_racing_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_racing_racing_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_racing_racing_proto_goTypes = []any{
-	(*ListRacesRequest)(nil),       // 0: racing.ListRacesRequest
-	(*ListRacesResponse)(nil),      // 1: racing.ListRacesResponse
-	(*ListRacesRequestFilter)(nil), // 2: racing.ListRacesRequestFilter
-	(*Race)(nil),                   // 3: racing.Race
-	(*timestamppb.Timestamp)(nil),  // 4: google.protobuf.Timestamp
+	(Race_Status)(0),               // 0: racing.Race.Status
+	(*ListRacesRequest)(nil),       // 1: racing.ListRacesRequest
+	(*ListRacesResponse)(nil),      // 2: racing.ListRacesResponse
+	(*ListRacesRequestFilter)(nil), // 3: racing.ListRacesRequestFilter
+	(*Race)(nil),                   // 4: racing.Race
+	(*timestamppb.Timestamp)(nil),  // 5: google.protobuf.Timestamp
 }
 var file_racing_racing_proto_depIdxs = []int32{
-	2, // 0: racing.ListRacesRequest.filter:type_name -> racing.ListRacesRequestFilter
-	3, // 1: racing.ListRacesResponse.races:type_name -> racing.Race
-	4, // 2: racing.Race.advertised_start_time:type_name -> google.protobuf.Timestamp
-	0, // 3: racing.Racing.ListRaces:input_type -> racing.ListRacesRequest
-	1, // 4: racing.Racing.ListRaces:output_type -> racing.ListRacesResponse
-	4, // [4:5] is the sub-list for method output_type
-	3, // [3:4] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	3, // 0: racing.ListRacesRequest.filter:type_name -> racing.ListRacesRequestFilter
+	4, // 1: racing.ListRacesResponse.races:type_name -> racing.Race
+	5, // 2: racing.Race.advertised_start_time:type_name -> google.protobuf.Timestamp
+	0, // 3: racing.Race.status:type_name -> racing.Race.Status
+	1, // 4: racing.Racing.ListRaces:input_type -> racing.ListRacesRequest
+	2, // 5: racing.Racing.ListRaces:output_type -> racing.ListRacesResponse
+	5, // [5:6] is the sub-list for method output_type
+	4, // [4:5] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_racing_racing_proto_init() }
@@ -338,13 +400,14 @@ func file_racing_racing_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_racing_racing_proto_rawDesc), len(file_racing_racing_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_racing_racing_proto_goTypes,
 		DependencyIndexes: file_racing_racing_proto_depIdxs,
+		EnumInfos:         file_racing_racing_proto_enumTypes,
 		MessageInfos:      file_racing_racing_proto_msgTypes,
 	}.Build()
 	File_racing_racing_proto = out.File

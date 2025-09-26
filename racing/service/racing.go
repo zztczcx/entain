@@ -1,6 +1,8 @@
 package service
 
 import (
+	"time"
+
 	"git.neds.sh/matty/entain/racing/db"
 	"git.neds.sh/matty/entain/racing/proto/racing"
 	"golang.org/x/net/context"
@@ -25,6 +27,15 @@ func (s *racingService) ListRaces(ctx context.Context, in *racing.ListRacesReque
 	races, err := s.racesRepo.List(in.Filter)
 	if err != nil {
 		return nil, err
+	}
+
+	now := time.Now()
+	for _, r := range races {
+		if r.AdvertisedStartTime.AsTime().After(now) {
+			r.Status = racing.Race_STATUS_OPEN
+		} else {
+			r.Status = racing.Race_STATUS_CLOSED
+		}
 	}
 
 	return &racing.ListRacesResponse{Races: races}, nil

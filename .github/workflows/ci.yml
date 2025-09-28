@@ -8,7 +8,6 @@ env:
   GRPC_GATEWAY_VERSION: 'v2.27.2'
   PROTOC_GEN_GO_VERSION: 'v1.36.9'
   PROTOC_GEN_GO_GRPC_VERSION: 'v1.5.1'
-  MOCKERY_VERSION: 'v2.53'
 
 jobs:
   lint:
@@ -35,7 +34,7 @@ jobs:
           go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-{grpc-gateway,openapiv2}@${{ env.GRPC_GATEWAY_VERSION }} &
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@${{ env.PROTOC_GEN_GO_GRPC_VERSION }} &
           go install google.golang.org/protobuf/cmd/protoc-gen-go@${{ env.PROTOC_GEN_GO_VERSION }} &
-          go install github.com/vektra/mockery/v2@${{ env.MOCKERY_VERSION }} &
+          go install github.com/vektra/mockery/v2 &
           wait
           for service in racing sports api; do
             (cd $service && go generate ./... && go vet ./... && go fmt -d . | tee fmt.out && test ! -s fmt.out)
@@ -96,7 +95,7 @@ jobs:
       - name: Test services
         run: |
           export PATH="/usr/local/bin:$PATH"
-          go install github.com/vektra/mockery/v2@${{ env.MOCKERY_VERSION }}
+          go install github.com/vektra/mockery/v2
           for service in racing sports; do
             (cd $service && go generate ./... && go test ./...)
           done

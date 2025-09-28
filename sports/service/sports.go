@@ -15,7 +15,6 @@ type Sports interface {
 
 // sportsService implements the Sports interface.
 type sportsService struct {
-	sports.UnimplementedSportsServer
 	eventsRepo db.EventsRepo
 }
 

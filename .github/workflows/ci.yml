@@ -12,7 +12,6 @@ env:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    container: bufbuild/buf:latest
     env:
       PATH: /usr/local/bin:/usr/bin:/bin:/usr/local/go/bin:/go/bin
     steps:
@@ -43,7 +42,6 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    container: bufbuild/buf:latest
     env:
       PATH: /usr/local/bin:/usr/bin:/bin:/usr/local/go/bin:/go/bin
     needs: lint
@@ -80,7 +78,6 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    container: bufbuild/buf:latest
     env:
       PATH: /usr/local/bin:/usr/bin:/bin:/usr/local/go/bin:/go/bin
     needs: build

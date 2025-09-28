@@ -103,4 +103,16 @@ jobs:
             http://localhost:8000/v1/list-races | tee resp_visible.json
           grep -q '"races"' resp_visible.json
 
+      - name: Curl GetRace (existing id)
+        run: |
+          code=$(curl -sS -o resp_get.json -w '%{http_code}' http://localhost:8000/v1/races/1)
+          test "$code" = "200"
+          grep -q '"race"' resp_get.json
+          grep -q '"id":1' resp_get.json
+
+      - name: Curl GetRace (not found)
+        run: |
+          code=$(curl -sS -o resp_get_nf.json -w '%{http_code}' http://localhost:8000/v1/races/9999)
+          test "$code" = "404"
+
 

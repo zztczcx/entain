@@ -8,6 +8,7 @@ import (
 
 	"git.neds.sh/matty/entain/racing/proto/racing"
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -161,6 +162,84 @@ func TestRacesRepo_List_WithSQLMock(t *testing.T) {
 			got, err := repo.List(tt.filter)
 			require.NoError(t, err)
 			require.Len(t, got, tt.wantCount)
+			require.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestRacesRepo_Get_WithSQLMock(t *testing.T) {
+	baseGet := getRaceQueries()[racesGet]
+	cols := []string{"id", "meeting_id", "name", "number", "visible", "advertised_start_time"}
+
+	tests := []struct {
+		name      string
+		id        int64
+		expectSQL string
+		row       []any
+		willErr   error
+		wantNil   bool
+	}{
+		{
+			name:      "found",
+			id:        42,
+			expectSQL: baseGet,
+			row:       []any{int64(42), int64(5), "Found Race", int64(3), true, time.Now()},
+			willErr:   nil,
+			wantNil:   false,
+		},
+		{
+			name:      "not found (no rows)",
+			id:        7,
+			expectSQL: baseGet,
+			row:       nil, // no rows
+			willErr:   nil,
+			wantNil:   true,
+		},
+		{
+			name:      "db error",
+			id:        8,
+			expectSQL: baseGet,
+			row:       nil,
+			willErr:   assert.AnError,
+			wantNil:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sqlDB, mock, err := sqlmock.New()
+			require.NoError(t, err)
+			defer sqlDB.Close()
+
+			repo := &racesRepo{db: sqlDB}
+
+			exp := mock.ExpectQuery(regexp.QuoteMeta(tt.expectSQL)).WithArgs(tt.id)
+			if tt.willErr != nil {
+				exp.WillReturnError(tt.willErr)
+			} else {
+				if tt.row == nil {
+					exp.WillReturnRows(sqlmock.NewRows(cols))
+				} else {
+					var drvVals []driver.Value
+					for _, v := range tt.row {
+						drvVals = append(drvVals, v)
+					}
+					exp.WillReturnRows(sqlmock.NewRows(cols).AddRow(drvVals...))
+				}
+			}
+
+			got, err := repo.Get(tt.id)
+			if tt.willErr != nil {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			if tt.wantNil {
+				require.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				require.Equal(t, tt.id, got.Id)
+			}
 			require.NoError(t, mock.ExpectationsWereMet())
 		})
 	}

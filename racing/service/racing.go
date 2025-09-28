@@ -6,6 +6,8 @@ import (
 	"git.neds.sh/matty/entain/racing/db"
 	"git.neds.sh/matty/entain/racing/proto/racing"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Racing interface {
@@ -49,7 +51,7 @@ func (s *racingService) GetRace(ctx context.Context, in *racing.GetRaceRequest) 
 		return nil, err
 	}
 	if race == nil {
-		return &racing.GetRaceResponse{}, nil
+		return nil, status.Error(codes.NotFound, "race not found")
 	}
 
 	now := time.Now()

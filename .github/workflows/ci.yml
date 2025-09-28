@@ -13,79 +13,63 @@ env:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    container: 
-      image: bufbuild/buf:latest
+    container: bufbuild/buf:latest
+    env:
+      PATH: /usr/local/bin:/usr/bin:/bin:/usr/local/go/bin:/go/bin
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Cache Go tools
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
-          path: ~/go/bin
-          key: go-tools-${{ env.GRPC_GATEWAY_VERSION }}-${{ env.PROTOC_GEN_GO_VERSION }}-${{ env.PROTOC_GEN_GO_GRPC_VERSION }}-${{ env.MOCKERY_VERSION }}
-
-      - name: Install additional tools
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            ~/go/bin
+          key: go-cache-${{ hashFiles('**/go.sum') }}-${{ env.GRPC_GATEWAY_VERSION }}
+      - name: Setup and lint
         run: |
-          # Install tools in parallel with specific versions for better caching
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@${{ env.GRPC_GATEWAY_VERSION }} &
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@${{ env.GRPC_GATEWAY_VERSION }} &
+          # Ensure protoc is in PATH and install tools
+          export PATH="/usr/local/bin:$PATH"
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-{grpc-gateway,openapiv2}@${{ env.GRPC_GATEWAY_VERSION }} &
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@${{ env.PROTOC_GEN_GO_GRPC_VERSION }} &
           go install google.golang.org/protobuf/cmd/protoc-gen-go@${{ env.PROTOC_GEN_GO_VERSION }} &
           go install github.com/vektra/mockery/v2@${{ env.MOCKERY_VERSION }} &
           wait
-
-      - name: Generate code and run linting
-        run: |
           for service in racing sports api; do
             (cd $service && go generate ./... && go vet ./... && go fmt -d . | tee fmt.out && test ! -s fmt.out)
           done
 
   build:
     runs-on: ubuntu-latest
-    container:
-      image: bufbuild/buf:latest
+    container: bufbuild/buf:latest
+    env:
+      PATH: /usr/local/bin:/usr/bin:/bin:/usr/local/go/bin:/go/bin
     needs: lint
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Cache Go tools
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
-          path: ~/go/bin
-          key: go-tools-${{ env.GRPC_GATEWAY_VERSION }}-${{ env.PROTOC_GEN_GO_VERSION }}-${{ env.PROTOC_GEN_GO_GRPC_VERSION }}-${{ env.MOCKERY_VERSION }}
-
-      - name: Install additional tools
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            ~/go/bin
+          key: go-cache-${{ hashFiles('**/go.sum') }}-${{ env.GRPC_GATEWAY_VERSION }}
+      - name: Build and package
         run: |
-          # Install tools in parallel with specific versions for better caching
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@${{ env.GRPC_GATEWAY_VERSION }} &
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@${{ env.GRPC_GATEWAY_VERSION }} &
+          export PATH="/usr/local/bin:$PATH"
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-{grpc-gateway,openapiv2}@${{ env.GRPC_GATEWAY_VERSION }} &
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@${{ env.PROTOC_GEN_GO_GRPC_VERSION }} &
           go install google.golang.org/protobuf/cmd/protoc-gen-go@${{ env.PROTOC_GEN_GO_VERSION }} &
-          go install github.com/vektra/mockery/v2@${{ env.MOCKERY_VERSION }} &
           wait
-
-
-      - name: Build services
-        run: |
-          for service in racing sports api; do
-            (cd $service && go generate ./... && go build -buildvcs=false ./...)
-          done
-
-      - name: Create distribution binaries
-        run: |
           mkdir -p dist
           for service in racing sports api; do
-            (cd $service && go build -buildvcs=false -o ../dist/$service .)
+            (cd $service && go generate ./... && go build -buildvcs=false -o ../dist/$service .)
           done
-
       - uses: actions/upload-artifact@v4
         with:
           name: dist
@@ -93,34 +77,26 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    container:
-      image: bufbuild/buf:latest
+    container: bufbuild/buf:latest
+    env:
+      PATH: /usr/local/bin:/usr/bin:/bin:/usr/local/go/bin:/go/bin
     needs: build
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: true
-
-      - name: Cache Go tools
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
-          path: ~/go/bin
-          key: go-tools-${{ env.GRPC_GATEWAY_VERSION }}-${{ env.PROTOC_GEN_GO_VERSION }}-${{ env.PROTOC_GEN_GO_GRPC_VERSION }}-${{ env.MOCKERY_VERSION }}
-
-      - name: Install additional tools
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            ~/go/bin
+          key: go-cache-${{ hashFiles('**/go.sum') }}-${{ env.GRPC_GATEWAY_VERSION }}
+      - name: Test services
         run: |
-          # Install tools in parallel with specific versions for better caching
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@${{ env.GRPC_GATEWAY_VERSION }} &
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@${{ env.GRPC_GATEWAY_VERSION }} &
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@${{ env.PROTOC_GEN_GO_GRPC_VERSION }} &
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@${{ env.PROTOC_GEN_GO_VERSION }} &
-          go install github.com/vektra/mockery/v2@${{ env.MOCKERY_VERSION }} &
-          wait
-
-      - name: Run tests
-        run: |
+          export PATH="/usr/local/bin:$PATH"
+          go install github.com/vektra/mockery/v2@${{ env.MOCKERY_VERSION }}
           for service in racing sports; do
             (cd $service && go generate ./... && go test ./...)
           done

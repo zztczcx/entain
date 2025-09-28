@@ -5,10 +5,16 @@ on:
 
 env:
   GO_VERSION: '1.23.x'
+  GRPC_GATEWAY_VERSION: 'v2.27.2'
+  PROTOC_GEN_GO_VERSION: 'v1.36.9'
+  PROTOC_GEN_GO_GRPC_VERSION: 'v1.5.1'
+  MOCKERY_VERSION: 'v2.53.5'
 
 jobs:
   lint:
     runs-on: ubuntu-latest
+    container: 
+      image: bufbuild/buf:latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -16,12 +22,21 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Setup protoc and tools
+      - name: Cache Go tools
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin
+          key: go-tools-${{ env.GRPC_GATEWAY_VERSION }}-${{ env.PROTOC_GEN_GO_VERSION }}-${{ env.PROTOC_GEN_GO_GRPC_VERSION }}-${{ env.MOCKERY_VERSION }}
+
+      - name: Install additional tools
         run: |
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-{grpc-gateway,openapiv2}@latest
-          go install google.golang.org/{grpc/cmd/protoc-gen-go-grpc,protobuf/cmd/protoc-gen-go}@latest
-          go install github.com/vektra/mockery/v2@v2.53
+          # Install tools in parallel with specific versions for better caching
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@${{ env.GRPC_GATEWAY_VERSION }} &
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@${{ env.GRPC_GATEWAY_VERSION }} &
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@${{ env.PROTOC_GEN_GO_GRPC_VERSION }} &
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@${{ env.PROTOC_GEN_GO_VERSION }} &
+          go install github.com/vektra/mockery/v2@${{ env.MOCKERY_VERSION }} &
+          wait
 
       - name: Generate code and run linting
         run: |
@@ -31,6 +46,8 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    container:
+      image: bufbuild/buf:latest
     needs: lint
     steps:
       - uses: actions/checkout@v4
@@ -39,12 +56,21 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Setup protoc and tools
+      - name: Cache Go tools
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin
+          key: go-tools-${{ env.GRPC_GATEWAY_VERSION }}-${{ env.PROTOC_GEN_GO_VERSION }}-${{ env.PROTOC_GEN_GO_GRPC_VERSION }}-${{ env.MOCKERY_VERSION }}
+
+      - name: Install additional tools
         run: |
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-{grpc-gateway,openapiv2}@latest
-          go install google.golang.org/{grpc/cmd/protoc-gen-go-grpc,protobuf/cmd/protoc-gen-go}@latest
-          go install github.com/vektra/mockery/v2@v2.53
+          # Install tools in parallel with specific versions for better caching
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@${{ env.GRPC_GATEWAY_VERSION }} &
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@${{ env.GRPC_GATEWAY_VERSION }} &
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@${{ env.PROTOC_GEN_GO_GRPC_VERSION }} &
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@${{ env.PROTOC_GEN_GO_VERSION }} &
+          go install github.com/vektra/mockery/v2@${{ env.MOCKERY_VERSION }} &
+          wait
 
 
       - name: Build services
@@ -67,6 +93,9 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    container:
+      image: bufbuild/buf:latest
+    needs: build
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -74,12 +103,21 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Setup protoc and tools
+      - name: Cache Go tools
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin
+          key: go-tools-${{ env.GRPC_GATEWAY_VERSION }}-${{ env.PROTOC_GEN_GO_VERSION }}-${{ env.PROTOC_GEN_GO_GRPC_VERSION }}-${{ env.MOCKERY_VERSION }}
+
+      - name: Install additional tools
         run: |
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-{grpc-gateway,openapiv2}@latest
-          go install google.golang.org/{grpc/cmd/protoc-gen-go-grpc,protobuf/cmd/protoc-gen-go}@latest
-          go install github.com/vektra/mockery/v2@v2.53
+          # Install tools in parallel with specific versions for better caching
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@${{ env.GRPC_GATEWAY_VERSION }} &
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@${{ env.GRPC_GATEWAY_VERSION }} &
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@${{ env.PROTOC_GEN_GO_GRPC_VERSION }} &
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@${{ env.PROTOC_GEN_GO_VERSION }} &
+          go install github.com/vektra/mockery/v2@${{ env.MOCKERY_VERSION }} &
+          wait
 
       - name: Run tests
         run: |
@@ -89,7 +127,7 @@ jobs:
 
   smoke:
     runs-on: ubuntu-latest
-    needs: [lint, build, test]
+    needs: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4

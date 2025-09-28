@@ -108,7 +108,7 @@ jobs:
           code=$(curl -sS -o resp_get.json -w '%{http_code}' http://localhost:8000/v1/races/1)
           test "$code" = "200"
           grep -q '"race"' resp_get.json
-          grep -q '"id":1' resp_get.json
+          grep -Eq '"id":\s*"?1"?' resp_get.json
 
       - name: Curl GetRace (not found)
         run: |

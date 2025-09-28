@@ -60,6 +60,36 @@ func (_m *RacesRepoMock) List(filter *racing.ListRacesRequestFilter) ([]*racing.
 	return r0, r1
 }
 
+// Get provides a mock function with given fields: id
+func (_m *RacesRepoMock) Get(id int64) (*racing.Race, error) {
+	ret := _m.Called(id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Get")
+	}
+
+	var r0 *racing.Race
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int64) (*racing.Race, error)); ok {
+		return rf(id)
+	}
+	if rf, ok := ret.Get(0).(func(int64) *racing.Race); ok {
+		r0 = rf(id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*racing.Race)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int64) error); ok {
+		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NewRacesRepoMock creates a new instance of RacesRepoMock. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewRacesRepoMock(t interface {

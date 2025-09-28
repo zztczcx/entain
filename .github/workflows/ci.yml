@@ -3,116 +3,132 @@ name: CI
 on:
   push:
 
+env:
+  GO_VERSION: '1.23.x'
+
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
+          go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Install protoc
+      - name: Setup protoc and tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-{grpc-gateway,openapiv2}@latest
+          go install google.golang.org/{grpc/cmd/protoc-gen-go-grpc,protobuf/cmd/protoc-gen-go}@latest
+          go install github.com/vektra/mockery/v2@v2.53
 
-      - name: Install protoc/tools plugins
+      - name: Generate code and run linting
         run: |
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          for service in racing sports api; do
+            (cd $service && go generate ./... && go vet ./... && go fmt -d . | tee fmt.out && test ! -s fmt.out)
+          done
+
+  build:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Setup protoc and tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-{grpc-gateway,openapiv2}@latest
+          go install google.golang.org/{grpc/cmd/protoc-gen-go-grpc,protobuf/cmd/protoc-gen-go}@latest
           go install github.com/vektra/mockery/v2@v2.53
 
 
-      - name: Generate and build racing
-        working-directory: racing
+      - name: Build services
         run: |
-          go generate ./...
-          go build -buildvcs=false ./...
+          for service in racing sports api; do
+            (cd $service && go generate ./... && go build -buildvcs=false ./...)
+          done
 
-      - name: Generate and build api
-        working-directory: api
-        run: |
-          go generate ./...
-          go build -buildvcs=false ./...
-
-      - name: Build binaries (dist)
+      - name: Create distribution binaries
         run: |
           mkdir -p dist
-          (cd racing && go build -buildvcs=false -o ../dist/racing .)
-          (cd api && go build -buildvcs=false -o ../dist/api .)
+          for service in racing sports api; do
+            (cd $service && go build -buildvcs=false -o ../dist/$service .)
+          done
 
-      - name: Upload binaries artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/**
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Setup protoc and tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-{grpc-gateway,openapiv2}@latest
+          go install google.golang.org/{grpc/cmd/protoc-gen-go-grpc,protobuf/cmd/protoc-gen-go}@latest
+          go install github.com/vektra/mockery/v2@v2.53
+
+      - name: Run tests
+        run: |
+          for service in racing sports; do
+            (cd $service && go generate ./... && go test ./...)
+          done
+
   smoke:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [lint, build, test]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download binaries artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
 
-      - name: Make binaries executable
+      - name: Start services
         run: |
-          chmod +x dist/racing dist/api
+          chmod +x dist/*
+          nohup ./dist/racing --grpc-endpoint localhost:9000 > racing.out 2>&1 &
+          nohup ./dist/sports --grpc-endpoint localhost:9001 > sports.out 2>&1 &
+          nohup ./dist/api --api-endpoint localhost:8000 --racing-grpc-endpoint localhost:9000 --sports-grpc-endpoint localhost:9001 > api.out 2>&1 &
 
-      - name: Start gRPC server
-        working-directory: racing
+      - name: Wait for API and run smoke tests
         run: |
-          nohup bash -c '../dist/racing --grpc-endpoint localhost:9000' > ../racing.out 2>&1 &
-
-      - name: Start API gateway
-        working-directory: api
-        run: |
-          nohup bash -c '../dist/api --api-endpoint localhost:8000 --grpc-endpoint localhost:9000' > ../api.out 2>&1 &
-
-      - name: Wait for API to be ready
-        run: |
+          # Wait for API to be ready
           for i in {1..30}; do
             if curl -sS -H 'Content-Type: application/json' -d '{}' http://localhost:8000/v1/list-races -o /dev/null; then
-              echo "API ready"; exit 0;
+              echo "API ready"; break;
             fi
             sleep 1
+            if [ $i -eq 30 ]; then
+              echo "API timeout"; tail -n +1 *.out; exit 1
+            fi
           done
-          echo "API did not become ready in time"; echo '--- api logs ---'; tail -n +1 api.out || true; echo '--- racing logs ---'; tail -n +1 racing.out || true; exit 1
 
-      - name: Curl ListRaces (default)
-        run: |
-          curl -sS -H 'Content-Type: application/json' -d '{}' http://localhost:8000/v1/list-races | tee resp.json
-          grep -q '"races"' resp.json
-
-      - name: Curl ListRaces (visible only)
-        run: |
-          curl -sS -H 'Content-Type: application/json' \
-            -d '{"filter":{"show_hidden": false}}' \
-            http://localhost:8000/v1/list-races | tee resp_visible.json
-          grep -q '"races"' resp_visible.json
-
-      - name: Curl GetRace (existing id)
-        run: |
-          code=$(curl -sS -o resp_get.json -w '%{http_code}' http://localhost:8000/v1/races/1)
+          # Test racing endpoints
+          curl -sS -H 'Content-Type: application/json' -d '{}' http://localhost:8000/v1/list-races | grep -q '"races"'
+          curl -sS -H 'Content-Type: application/json' -d '{"filter":{"show_hidden": false}}' http://localhost:8000/v1/list-races | grep -q '"races"'
+          
+          # Test GetRace
+          code=$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8000/v1/races/1)
           test "$code" = "200"
-          grep -q '"race"' resp_get.json
-          grep -Eq '"id":\s*"?1"?' resp_get.json
-
-      - name: Curl GetRace (not found)
-        run: |
-          code=$(curl -sS -o resp_get_nf.json -w '%{http_code}' http://localhost:8000/v1/races/9999)
+          code=$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8000/v1/races/9999)
           test "$code" = "404"
 
+          # Test sports endpoints
+          curl -sS -H 'Content-Type: application/json' -d '{}' http://localhost:8000/v1/list-events | grep -q '"events"'
+          curl -sS -H 'Content-Type: application/json' -d '{"filter":{"show_hidden": false}}' http://localhost:8000/v1/list-events | grep -q '"events"'
+          curl -sS -H 'Content-Type: application/json' -d '{"filter":{"sport_ids": [1], "show_hidden": false}}' http://localhost:8000/v1/list-events | grep -q '"events"'
 

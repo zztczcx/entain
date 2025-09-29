@@ -1,0 +1,63 @@
+syntax = "proto3";
+package sports;
+
+option go_package = "/sports";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+service Sports {
+  // ListEvents returns a list of all sports events.
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {
+    option (google.api.http) = { post: "/v1/list-events", body: "*" };
+  }
+}
+
+/* Requests/Responses */
+
+// Request for ListEvents call.
+message ListEventsRequest {
+  ListEventsRequestFilter filter = 1;
+}
+
+// Response to ListEvents call.
+message ListEventsResponse {
+  repeated Event events = 1;
+}
+
+// Filter for listing sports events.
+message ListEventsRequestFilter {
+  repeated int64 sport_ids = 1;
+  // When unset, include hidden (default). Set false to only visible; true to include hidden.
+  optional bool show_hidden = 2;
+  // Order by, e.g. "advertised_start_time" or "advertised_start_time desc" (default asc)
+  string order_by = 3;
+}
+
+/* Resources */
+
+// A sports event resource.
+message Event {
+  // ID represents a unique identifier for the sports event.
+  int64 id = 1;
+  // SportID represents a unique identifier for the sport type.
+  int64 sport_id = 2;
+  // Name is the official name given to the sports event.
+  string name = 3;
+  // Venue is the location where the event takes place.
+  string venue = 4;
+  // Visible represents whether or not the event is visible.
+  bool visible = 5;
+  // AdvertisedStartTime is the time the event is advertised to start.
+  google.protobuf.Timestamp advertised_start_time = 6;
+  // Status is derived from advertised_start_time: OPEN (future) or CLOSED (past)
+  enum Status {
+    STATUS_OPEN = 0;
+    STATUS_CLOSED = 1;
+  }
+  Status status = 7;
+  // HomeTeam represents the home team or participant.
+  string home_team = 8;
+  // AwayTeam represents the away team or participant.
+  string away_team = 9;
+}

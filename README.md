@@ -19,6 +19,11 @@ entain/
 │  ├─ proto/
 │  ├─ service/
 │  ├─ main.go
+├─ sports/
+│  ├─ db/
+│  ├─ proto/
+│  ├─ service/
+│  ├─ main.go
 ├─ README.md
 ```
 
@@ -40,13 +45,20 @@ brew install protobuf
 
 ... or [see here](https://grpc.io/docs/protoc-installation/).
 
-2. In a terminal window, start our racing service...
+2. In a terminal window, start our racing/sports service...
 
 ```bash
 cd ./racing
 
 go build && ./racing
 ➜ INFO[0000] gRPC server listening on: localhost:9000
+```
+
+```bash
+cd ./sports
+
+go build && ./sports
+➜ INFO[0000] gRPC server listening on: localhost:9009
 ```
 
 3. In another terminal window, start our api service...

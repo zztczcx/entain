@@ -104,5 +104,5 @@ jobs:
       - name: Run smoke tests
         run: |
           chmod +x .github/scripts/smoke.sh
-          .github/scripts/smoke.sh --start --stop
+          .github/scripts/smoke.sh
 

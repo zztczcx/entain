@@ -59,17 +59,9 @@ jobs:
           key: go-cache-${{ hashFiles('**/go.sum') }}-${{ env.GRPC_GATEWAY_VERSION }}
       - name: Build and package
         run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@${{ env.GRPC_GATEWAY_VERSION }} &
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@${{ env.GRPC_GATEWAY_VERSION }} &
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@${{ env.PROTOC_GEN_GO_GRPC_VERSION }} &
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@${{ env.PROTOC_GEN_GO_VERSION }} &
-          go install github.com/vektra/mockery/v2@v2.53.5 &
-          wait
           mkdir -p dist
           for service in racing sports api; do
-            (cd $service && go generate ./... && go build -buildvcs=false -o ../dist/$service .)
+            (cd $service && go build -buildvcs=false -o ../dist/$service .)
           done
       - uses: actions/upload-artifact@v4
         with:
@@ -95,15 +87,8 @@ jobs:
           key: go-cache-${{ hashFiles('**/go.sum') }}-${{ env.GRPC_GATEWAY_VERSION }}
       - name: Test services
         run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@${{ env.GRPC_GATEWAY_VERSION }}
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@${{ env.GRPC_GATEWAY_VERSION }}
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@${{ env.PROTOC_GEN_GO_GRPC_VERSION }}
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@${{ env.PROTOC_GEN_GO_VERSION }}
-          go install github.com/vektra/mockery/v2@v2.53.5
           for service in racing sports; do
-            (cd $service && go generate ./... && go test ./...)
+            (cd $service && go test ./...)
           done
 
   smoke:
@@ -116,38 +101,8 @@ jobs:
           name: dist
           path: dist
 
-      - name: Start services
+      - name: Run smoke tests
         run: |
-          chmod +x dist/*
-          nohup ./dist/racing --grpc-endpoint localhost:9000 > racing.out 2>&1 &
-          nohup ./dist/sports --grpc-endpoint localhost:9001 > sports.out 2>&1 &
-          nohup ./dist/api --api-endpoint localhost:8000 --racing-grpc-endpoint localhost:9000 --sports-grpc-endpoint localhost:9001 > api.out 2>&1 &
-
-      - name: Wait for API and run smoke tests
-        run: |
-          # Wait for API to be ready
-          for i in {1..30}; do
-            if curl -sS -H 'Content-Type: application/json' -d '{}' http://localhost:8000/v1/list-races -o /dev/null; then
-              echo "API ready"; break;
-            fi
-            sleep 1
-            if [ $i -eq 30 ]; then
-              echo "API timeout"; tail -n +1 *.out; exit 1
-            fi
-          done
-
-          # Test racing endpoints
-          curl -sS -H 'Content-Type: application/json' -d '{}' http://localhost:8000/v1/list-races | grep -q '"races"'
-          curl -sS -H 'Content-Type: application/json' -d '{"filter":{"show_hidden": false}}' http://localhost:8000/v1/list-races | grep -q '"races"'
-          
-          # Test GetRace
-          code=$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8000/v1/races/1)
-          test "$code" = "200"
-          code=$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8000/v1/races/9999)
-          test "$code" = "404"
-
-          # Test sports endpoints
-          curl -sS -H 'Content-Type: application/json' -d '{}' http://localhost:8000/v1/list-events | grep -q '"events"'
-          curl -sS -H 'Content-Type: application/json' -d '{"filter":{"show_hidden": false}}' http://localhost:8000/v1/list-events | grep -q '"events"'
-          curl -sS -H 'Content-Type: application/json' -d '{"filter":{"sport_ids": [1], "show_hidden": false}}' http://localhost:8000/v1/list-events | grep -q '"events"'
+          chmod +x .github/scripts/smoke.sh
+          .github/scripts/smoke.sh --start --stop
 
